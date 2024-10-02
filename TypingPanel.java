@@ -20,6 +20,9 @@ public class TypingPanel extends JPanel implements ActionListener {
     private long startTime;
 
     public TypingPanel(String[] passages) {
+        if (passages == null || passages.length == 0) {
+            throw new IllegalArgumentException("Passages cannot be null or empty.");
+        }
         this.passages = passages;
         setupPanel();
     }
@@ -30,12 +33,12 @@ public class TypingPanel extends JPanel implements ActionListener {
         passageArea = new JTextArea();
         passageArea.setWrapStyleWord(true);
         passageArea.setLineWrap(true);
-        passageArea.setEditable(false);
+        passageArea.setEditable(false); // Disable editing for the passage area
         passageArea.setFont(new Font("Serif", Font.PLAIN, 18)); // Set font size to 18
         add(new JScrollPane(passageArea), BorderLayout.NORTH);
 
         inputArea = new JTextPane();
-        inputArea.setEditable(false);
+        inputArea.setEditable(false); // Start as non-editable
         inputArea.setFont(new Font("Serif", Font.PLAIN, 18)); // Set font size to 18
         inputArea.addKeyListener(new KeyAdapter() {
             @Override
@@ -70,7 +73,7 @@ public class TypingPanel extends JPanel implements ActionListener {
         inputPassage = passages[(int) (Math.random() * passages.length)];
         passageArea.setText(inputPassage);
         inputArea.setText("");
-        inputArea.setEditable(true);
+        inputArea.setEditable(true); // Allow editing now
         inputArea.requestFocusInWindow();
         startButton.setEnabled(false);
         endButton.setEnabled(true);
@@ -78,6 +81,9 @@ public class TypingPanel extends JPanel implements ActionListener {
         startTime = System.currentTimeMillis();
 
         // Start the timer
+        if (timer != null && timer.isRunning()) {
+            timer.stop(); // Stop the previous timer if it exists
+        }
         timer = new Timer(1000, e -> updateTimer());
         timer.start();
     }
@@ -108,13 +114,13 @@ public class TypingPanel extends JPanel implements ActionListener {
 
         startButton.setEnabled(true);
         endButton.setEnabled(false);
-        inputArea.setEditable(false);
+        inputArea.setEditable(false); // Make the input area non-editable again
     }
 
     private double calculateLevenshteinAccuracy(String original, String typed) {
         int distance = levenshteinDistance(original, typed);
         int maxLength = Math.max(original.length(), typed.length());
-        return ((double)(maxLength - distance) / maxLength) * 100;
+        return maxLength == 0 ? 100.0 : ((double)(maxLength - distance) / maxLength) * 100; // Avoid division by zero
     }
 
     private int levenshteinDistance(String a, String b) {

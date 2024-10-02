@@ -2,225 +2,194 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Random;
 
-public class MainClass {
-    private JFrame frame;
-    private JPanel cards;
+public class MainClass extends JFrame {
     private CardLayout cardLayout;
-
+    private JPanel mainPanel;
     private JTextArea passageArea;
-    private JTextField inputField;
-    private JLabel timerLabel;
-    private JLabel accuracyLabel;
-    private JLabel speedLabel;
-    private JButton startButton;
-    private JButton nextButton;
-    private JButton yesButton;
-    private JButton noButton;
+    private JTextArea typingArea;
     private JComboBox<String> languageComboBox;
-    private String[] passages;
+    private String[] bengaliPassages;
+    private String[] englishPassages;
     private int currentPassageIndex;
-    private Timer timer;
-    private int timeElapsed;
-
+    private long startTime;
+    private String selectedLanguage;
+    
     public MainClass() {
-        frame = new JFrame("Typing Speed Test");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
+        setTitle("Typing Speed Software");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        bengaliPassages = BenPassages.getPassages();
+        englishPassages = EngPassages.getPassages();
 
         cardLayout = new CardLayout();
-        cards = new JPanel(cardLayout);
+        mainPanel = new JPanel(cardLayout);
 
-        createLanguageSelectionPanel();
-        createTypingTestPanel();
-        createResultsPanel();
+        addLanguageSelectionPage();
+        addInstructionPage();
+        addTypingPage();
+        addResultPage();
 
-        frame.add(cards);
-        frame.setVisible(true);
+        add(mainPanel);
     }
 
-    private void createLanguageSelectionPanel() {
-        JPanel panel = new JPanel(new GridLayout(3, 1));
+    private void addLanguageSelectionPage() {
+        JPanel languageSelectionPage = new JPanel(new BorderLayout());
+        JLabel title = new JLabel("TYPING SPEED SOFTWARE", JLabel.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 36));
+        languageSelectionPage.add(title, BorderLayout.CENTER);
+
         languageComboBox = new JComboBox<>(new String[]{"Bengali", "English"});
-        startButton = new JButton("Start");
+        languageComboBox.setFont(new Font("Arial", Font.PLAIN, 24));
+        
+        JButton startButton = new JButton("Start Typing");
+        startButton.setFont(new Font("Arial", Font.BOLD, 24));
+        startButton.setBackground(Color.RED);
+        startButton.setForeground(Color.WHITE);
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                selectedLanguage = (String) languageComboBox.getSelectedItem();
+                cardLayout.show(mainPanel, "InstructionPage");
+            }
+        });
 
-        startButton.addActionListener(new StartButtonActionListener());
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(languageComboBox);
+        buttonPanel.add(startButton);
+        languageSelectionPage.add(buttonPanel, BorderLayout.SOUTH);
 
-        panel.add(new JLabel("Select Language:"));
-        panel.add(languageComboBox);
-        panel.add(startButton);
-
-        cards.add(panel, "LanguageSelection");
+        mainPanel.add(languageSelectionPage, "LanguageSelectionPage");
     }
 
-    private void createTypingTestPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+    private void addInstructionPage() {
+        JPanel instructionPage = new JPanel(new BorderLayout());
+        JLabel instructions = new JLabel("<html><ul><li>Type the given paragraph exactly as it appears, including punctuation and capitalization.</li><li>Your typing speed will be measured in words per minute (WPM) based on how quickly and accurately you can type the entire paragraph.</li></ul></html>", JLabel.CENTER);
+        instructions.setFont(new Font("Arial", Font.PLAIN, 18));
+        instructionPage.add(instructions, BorderLayout.CENTER);
+
+        JButton startButton = new JButton("Start");
+        startButton.setFont(new Font("Arial", Font.BOLD, 24));
+        startButton.setBackground(Color.RED);
+        startButton.setForeground(Color.WHITE);
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cardLayout.show(mainPanel, "TypingPage");
+                startTypingTest();
+            }
+        });
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(startButton);
+        instructionPage.add(buttonPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(instructionPage, "InstructionPage");
+    }
+
+    private void addTypingPage() {
+        JPanel typingPage = new JPanel(new BorderLayout());
 
         passageArea = new JTextArea();
-        passageArea.setFont(new Font("Serif", Font.PLAIN, 18));
+        passageArea.setFont(new Font("Arial", Font.PLAIN, 24));
         passageArea.setLineWrap(true);
         passageArea.setWrapStyleWord(true);
         passageArea.setEditable(false);
+        typingPage.add(new JScrollPane(passageArea), BorderLayout.NORTH);
 
-        inputField = new JTextField();
-        inputField.setFont(new Font("Serif", Font.PLAIN, 18));
-        inputField.addActionListener(new TypingActionListener());
+        typingArea = new JTextArea();
+        typingArea.setFont(new Font("Arial", Font.PLAIN, 24));
+        typingArea.setLineWrap(true);
+        typingArea.setWrapStyleWord(true);
+        typingPage.add(new JScrollPane(typingArea), BorderLayout.CENTER);
 
-        timerLabel = new JLabel("Time: 0s");
-
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new GridLayout(1, 1));
-        topPanel.add(timerLabel);
-
-        panel.add(topPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(passageArea), BorderLayout.CENTER);
-
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(inputField, BorderLayout.CENTER);
-        panel.add(bottomPanel, BorderLayout.SOUTH);
-
-        cards.add(panel, "TypingTest");
-    }
-
-    private void createResultsPanel() {
-        JPanel panel = new JPanel(new GridLayout(5, 1));
-        accuracyLabel = new JLabel("Accuracy: 100%");
-        speedLabel = new JLabel("Speed: 0 WPM");
-        yesButton = new JButton("Yes");
-        noButton = new JButton("No");
-
-        yesButton.addActionListener(new YesButtonActionListener());
-        noButton.addActionListener(new NoButtonActionListener());
-
-        panel.add(accuracyLabel);
-        panel.add(speedLabel);
-        panel.add(new JLabel("Do you want more passages for practice?"));
-        panel.add(yesButton);
-        panel.add(noButton);
-
-        cards.add(panel, "Results");
-    }
-
-    private void loadPassages(String language) {
-        if (language.equals("Bengali")) {
-            passages = BenPassages.getPassages();
-        } else if (language.equals("English")) {
-            passages = EngPassages.getPassages();
-        }
-        currentPassageIndex = 0;
-        System.out.println("Loaded " + passages.length + " passages for " + language);
-    }
-
-    private void showNextPassage() {
-        if (currentPassageIndex < passages.length) {
-            String passage = passages[currentPassageIndex];
-            passageArea.setText(passage);
-            System.out.println("Showing passage: " + passage);
-            inputField.setText("");
-            startTimer();
-            cardLayout.show(cards, "TypingTest");
-        } else {
-            JOptionPane.showMessageDialog(frame, "You have completed all passages!");
-        }
-    }
-
-    private void startTimer() {
-        timeElapsed = 0;
-        timer = new Timer(1000, e -> {
-            timeElapsed++;
-            timerLabel.setText("Time: " + timeElapsed + "s");
+        JButton endButton = new JButton("End Typing");
+        endButton.setFont(new Font("Arial", Font.BOLD, 24));
+        endButton.setBackground(Color.RED);
+        endButton.setForeground(Color.WHITE);
+        endButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                endTypingTest();
+            }
         });
-        timer.start();
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(endButton);
+        typingPage.add(buttonPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(typingPage, "TypingPage");
     }
 
-    private void stopTimer() {
-        if (timer != null) {
-            timer.stop();
+    private void addResultPage() {
+        JPanel resultPage = new JPanel(new BorderLayout());
+
+        JLabel resultLabel = new JLabel("", JLabel.CENTER);
+        resultLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+        resultPage.add(resultLabel, BorderLayout.CENTER);
+
+        JButton moreButton = new JButton("Do you want more passages for practice?");
+        moreButton.setFont(new Font("Arial", Font.BOLD, 24));
+        moreButton.setBackground(Color.RED);
+        moreButton.setForeground(Color.WHITE);
+        moreButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cardLayout.show(mainPanel, "LanguageSelectionPage");
+            }
+        });
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(moreButton);
+        resultPage.add(buttonPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(resultPage, "ResultPage");
+    }
+
+    private void startTypingTest() {
+        Random rand = new Random();
+        if (selectedLanguage.equals("Bengali")) {
+            currentPassageIndex = rand.nextInt(bengaliPassages.length);
+            passageArea.setText(bengaliPassages[currentPassageIndex]);
+        } else {
+            currentPassageIndex = rand.nextInt(englishPassages.length);
+            passageArea.setText(englishPassages[currentPassageIndex]);
         }
+        typingArea.setText("");
+        startTime = System.currentTimeMillis();
     }
 
-    private void checkAccuracy() {
-        String inputText = inputField.getText();
-        String passageText = passages[currentPassageIndex];
-        int distance = LevenshteinDistance.calculate(inputText, passageText);
-        int maxLen = Math.max(inputText.length(), passageText.length());
-        double accuracy = 100.0 - ((double) distance / maxLen) * 100.0;
-        accuracyLabel.setText(String.format("Accuracy: %.2f%%", accuracy));
+    private void endTypingTest() {
+        long endTime = System.currentTimeMillis();
+        double totalTime = (endTime - startTime) / 1000.0 / 60.0; // time in minutes
+        int wordCount = typingArea.getText().split("\\s+").length;
+        double wpm = wordCount / totalTime;
+        double accuracy = calculateAccuracy(passageArea.getText(), typingArea.getText());
+
+        JLabel resultLabel = (JLabel) ((JPanel) mainPanel.getComponent(3)).getComponent(0);
+        resultLabel.setText(String.format("<html>Speed: %.2f WPM<br>Accuracy: %.2f%%</html>", wpm, accuracy));
+
+        cardLayout.show(mainPanel, "ResultPage");
     }
 
-    private void calculateSpeed() {
-        String inputText = inputField.getText();
-        int wordCount = inputText.split("\\s+").length;
-        double minutes = timeElapsed / 60.0;
-        double speed = wordCount / minutes;
-        speedLabel.setText(String.format("Speed: %.2f WPM", speed));
-    }
+    private double calculateAccuracy(String passage, String typing) {
+        int totalChars = passage.length();
+        int correctChars = 0;
 
-    private class TypingActionListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            stopTimer();
-            checkAccuracy();
-            calculateSpeed();
-            cardLayout.show(cards, "Results");
-        }
-    }
-
-    private class StartButtonActionListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            String selectedLanguage = (String) languageComboBox.getSelectedItem();
-            loadPassages(selectedLanguage);
-            if (passages != null && passages.length > 0) {
-                showNextPassage();
-            } else {
-                JOptionPane.showMessageDialog(frame, "Please select a language and load passages first.");
+        for (int i = 0; i < typing.length() && i < totalChars; i++) {
+            if (passage.charAt(i) == typing.charAt(i)) {
+                correctChars++;
             }
         }
-    }
 
-    private class YesButtonActionListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            currentPassageIndex++;
-            if (currentPassageIndex < passages.length) {
-                showNextPassage();
-            } else {
-                JOptionPane.showMessageDialog(frame, "You have completed all passages!");
-            }
-        }
-    }
-
-    private class NoButtonActionListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            JOptionPane.showMessageDialog(frame, "Thank you for using the Typing Speed Test!");
-            frame.dispose();
-        }
+        return (double) correctChars / totalChars * 100;
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(MainClass::new);
-    }
-}
-
-class LevenshteinDistance {
-    public static int calculate(String a, String b) {
-        int[][] dp = new int[a.length() + 1][b.length() + 1];
-
-        for (int i = 0; i <= a.length(); i++) {
-            for (int j = 0; j <= b.length(); j++) {
-                if (i == 0) {
-                    dp[i][j] = j;
-                } else if (j == 0) {
-                    dp[i][j] = i;
-                } else {
-                    dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
-                            dp[i - 1][j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1));
-                }
-            }
-        }
-
-        return dp[a.length()][b.length()];
+        SwingUtilities.invokeLater(() -> {
+            new MainClass().setVisible(true);
+        });
     }
 }
